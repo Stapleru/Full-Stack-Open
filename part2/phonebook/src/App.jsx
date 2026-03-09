@@ -1,35 +1,64 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Persons from './components/Persons';
 import Filter from './components/Filter';
 import PersonForm from './components/PersonForm';
+import personService from "./services/persons"
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', phone: '040-123456', id: 1 },
-    { name: 'Ada Lovelace', phone: '39-44-5323523', id: 2 },
-    { name: 'Dan Abramov', phone: '12-43-234345', id: 3 },
-    { name: 'Mary Poppendieck', phone: '39-23-6423122', id: 4 }
-  ]) 
+
+  const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newPhone, setNewPhone] = useState('')
   const [filterText, setFilterText] = useState('');
+
+  useEffect(() => {
+    personService
+      .getAll()
+      .then(initialPersons => setPersons(initialPersons))
+  }, [])
+
 
   const addName = (e) => {
     e.preventDefault();
 
     const personObj = {
       name: newName,
-      phone: newPhone,
-      id: persons.length +1
+      phone: newPhone
     }
 
-    persons.some((person) => person.name === personObj.name ) 
-      ? alert(`${newName} already in the book!`) 
-      : setPersons(persons.concat(personObj))  ;
-    setNewName('')
-    setNewPhone('')
+    const existingPerson = persons.find(person => person.name === personObj.name)
+
+    if(existingPerson){
+      // alert(`${newName} already in the book!`) 
+      if(window.confirm(`${personObj.name} is already in the phonebook, do you want to replace old number with the new one?`)){
+        personService
+          .update(existingPerson.id, personObj)
+          .then(returnedPerson => {
+            setPersons(persons.map(person => person.id !== existingPerson.id ? person : returnedPerson))
+            setNewName('')
+            setNewPhone('')   
+          })
+      }
+    }else{
+      personService
+        .create(personObj)
+        .then(returnedPerson => 
+          setPersons(persons.concat(returnedPerson)));
+      setNewName('')
+      setNewPhone('')
+    }
   }
 
+  const removePerson = (id, name) => {
+    if(window.confirm(`Do you want to delete ${name} ?`)){
+      personService
+        .remove(id)
+        .then(() => {
+          setPersons(persons.filter(person => person.id !== id))
+        })
+    }
+  }
+ 
   const handleNameChange = (e) => {
     setNewName(e.target.value)
   }
@@ -58,7 +87,9 @@ const App = () => {
         newName={newName} 
         newPhone={newPhone}/>
       <h2>Numbers</h2>
-      <Persons persons={filteredPersons} />
+      <Persons 
+        persons={filteredPersons} 
+        removePerson={removePerson} />
     </div>
   )
 }
