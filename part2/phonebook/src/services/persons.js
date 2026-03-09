@@ -23,7 +23,6 @@ const remove = id => {
     console.log(id)
     return axios
             .delete(`${baseUrl}/${id}`)
-            .then(null)
 }
 
 export default {getAll, create, update, remove}
